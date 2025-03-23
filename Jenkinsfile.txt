@@ -1,13 +1,23 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'docker:latest'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'   // Ensure Docker access
+        }
+    }
 
     environment {
-        DOCKER_IMAGE = 'yphalak/jenkins-k8s-app:latest'
-        K8S_MANIFEST = 'k8s-deployment.yaml'
+        DOCKER_CLI='docker'  // Use Docker CLI inside the Jenkins container
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()  // Clean workspace to prevent cache issues
+            }
+        }
+
+        stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/YPhalak/jenkins-k8s-app.git'
             }
@@ -15,24 +25,21 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE} ."
+                sh 'docker build -t yphalak/jenkins-k8s-app:latest .'
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
-                    sh "docker push ${DOCKER_IMAGE}"
+                withDockerRegistry([credentialsId: 'docker-hub-credentials', url: 'https://index.docker.io/v1/']) {
+                    sh 'docker push yphalak/jenkins-k8s-app:latest'
                 }
             }
         }
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh """
-                kubectl apply -f ${K8S_MANIFEST}
-                kubectl rollout status deployment/jenkins-k8s-app
-                """
+                sh 'kubectl apply -f k8s/deployment.yaml'
             }
         }
     }
