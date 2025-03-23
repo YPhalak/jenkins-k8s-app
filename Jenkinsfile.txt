@@ -25,14 +25,14 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t yphalak/jenkins-k8s-app:latest'
+                sh 'docker build -t yphalak/jenkins-k8s-app:latest .'
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
                 withDockerRegistry([credentialsId: 'docker-hub-credentials', url: 'https://index.docker.io/v1/']) {
-                    sh 'docker push yphalak/jenkins-k8s-app:latest'
+                    sh 'docker push yphalak/jenkins-k8s-app:latest .'
                 }
             }
         }
